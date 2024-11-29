@@ -1,10 +1,10 @@
-# GEODOS01B - Stand-alone ionizing radiation monitor
+# GEODOS01 - Stand-alone ionizing radiation monitor
 
 *Open-source scintillation detector of ionizing radiation. The device can be further modified according to specific requirements. The character of its construction makes it especially suitable for placement into mountains for in-field measurements*
 
 ![GEODOS01A Installed on Polednik site](/doc/src/img/GEODOS_Polednik_site.jpg)
 
-If you need a fully automatic ionizing radiation dosimeter-spectrometer device (with internal logging and a backup power supply) or a device designed for outdoor use without the possibility of connecting to a power supply and data network [GEODOS01](https://github.com/UniversalScientificTechnologies/GEODOS01) might be a better option. We can help you in choosing the most suitable device or even design and develop a new one according to your requirements. In either case, reach us using email [support@ust.cz](mailto:support@ust.cz).
+If you need a fully automatic ionizing radiation dosimeter-spectrometer device (with internal logging and a backup power supply) or a device designed for outdoor use without the possibility of connecting to a power supply and data network [GEODOS01](https://github.com/UniversalScientificTechnologies/GEODOS01) might be a better option. We can help you choose the most suitable device or even design and develop a new one according to your needs. In either case, reach us using email [support@ust.cz](mailto:support@ust.cz).
 
 ### Locations
 
@@ -20,7 +20,7 @@ One GEODOS device is installed in [Chernobyl Red Forest site](https://en.wikiped
 
 #### Šumava mountains
 
-GEODOS devices are installed in multiple locations in Šumava. For example example at [Polednik watch tower](https://cs.wikipedia.org/wiki/Poledn%C3%ADk_(%C5%A0umava)).
+GEODOS devices are installed in multiple locations in Šumava—for example example at [Polednik watch tower](https://cs.wikipedia.org/wiki/Poledn%C3%ADk_(%C5%A0umava)).
 
 ![GEODOS01A Installed on Polednik site](/doc/src/img/GEODOS_Polednik_site.jpg)
 
@@ -118,6 +118,11 @@ $HITS,20,916,84,2984,37,16386,38,30666,26,38530,48,43043,27,49257,100,53904,43,5
 * `hit count` - Number of events captured from the last HITS message
 * `time` - Time in seconds from power-up
 * `hit channel` - Channel corresponding to the captured event
+
+### Scientific papers
+
+* [Monitoring of ionizing radiation from thunderstorms in Bohemian Forest using standalone device GEODOS](https://www.npsumava.cz/wp-content/uploads/2024/11/ambrozova_web.pdf)
+
 
 ### Detailed documentation of the used electronic modules
 
