@@ -9,9 +9,7 @@ String FWversion = "GEO_1024_v4"; // Output data format (multiple files)
 #define EVENTS 500 // maximal number of recorded events
 #define GPSerror 700000 // number of cycles for waitig for GPS in case of GPS error 
 #define MSG_NO 20 // number of recorded NMEA messages
-#define GPSdelay 24   // number of sending telemetry per one GPS aquisition (12 hour)
-//#define TELEdelay 1   // 
-#define TELEdelay 200   // number of measurements between sending telemetry (40 minutes)
+#define GPSdelay 200*24   // number of measurements between sending GPS (12 hour)
                       
 #define MAXFILESIZE 28000000 // in bytes, 4 MB per day, 28 MB per week, 122 MB per month
 #define MAXCOUNT 53000 // in measurement cycles, 7 479 per day, 52353 per week, 224 369 per month
@@ -21,7 +19,7 @@ String FWversion = "GEO_1024_v4"; // Output data format (multiple files)
 // Compiled with: Arduino 1.8.13
 
 /*
-  GeoDos for Antarctica
+  GeoDos for Antarctica without IoT
 
 ISP
 ---
@@ -97,12 +95,8 @@ TX1/INT1 (D 11) PD3 17|        |24 PC2 (D 18) TCK
 #include "wiring_private.h"
 #include <Wire.h>           
 #include <Adafruit_MPL3115A2.h>
-#include <avr/wdt.h>
+//#include <avr/wdt.h>
 #include "src/TinyGPS++/TinyGPS++.h"
-
-#include <stdio.h>
-#include <stdint.h>
-
 #include <SPI.h>
 
 #define LED_red   23   // PC7
@@ -111,7 +105,7 @@ TX1/INT1 (D 11) PD3 17|        |24 PC2 (D 18) TCK
 #define SDpower1  1    // PB1
 #define SDpower2  2    // PB2
 #define SDpower3  3    // PB3
-#define SS        22//4    // PB4
+#define SS        4    // PB4
 #define MOSI      5    // PB5
 #define MISO      6    // PB6
 #define SCK       7    // PB7
@@ -208,31 +202,17 @@ int16_t readBat(int8_t regaddr)
 
   
 
-#define SD_ON     1
-#define SD_OFF    2
 #define GPS_ON    3
 #define GPS_OFF   4
-#define LORA_ON   5
-#define LORA_OFF  6
 
 
 void set_power(uint8_t state)
 {
   switch(state)
   {
-    case SD_ON:
-      pinMode(MISO, OUTPUT);     
-      pinMode(MOSI, OUTPUT);     
-      PORTB |= 0b00001110;
-      digitalWrite(SS, LOW);  
-      break;
-    case SD_OFF: // Do not power off
-      //digitalWrite(SS, HIGH);  
-      //PORTB &= 0b11110001;
-      break;
     case GPS_ON:
-      Serial1.begin(38400);
-      //Serial1.begin(9600);  // Old GPS
+      //Serial1.begin(38400);
+      Serial1.begin(9600);  // Old GPS
       digitalWrite(GPSpower, HIGH);  
       break;      
     case GPS_OFF:
@@ -243,12 +223,6 @@ void set_power(uint8_t state)
       pinMode(11, OUTPUT);  // TX1   
       digitalWrite(10, LOW);  
       break;
-    case LORA_ON:
-      digitalWrite(IOT_CS, LOW);  
-      break;
-    case LORA_OFF: 
-      digitalWrite(IOT_CS, HIGH);  
-      break;
     default:
       delay(100);
   }
@@ -256,7 +230,7 @@ void set_power(uint8_t state)
 
 void setup()
 {
-  wdt_disable();
+  //wdt_disable();
   pinMode(SDpower1, OUTPUT);  // SDcard interface
   pinMode(SDpower2, OUTPUT);     
   pinMode(SDpower3, OUTPUT);     
@@ -268,11 +242,8 @@ void setup()
   pinMode(SCK, OUTPUT);  
   pinMode(RESET, OUTPUT);   // reset signal for peak detetor
 
-  set_power(SD_OFF);
   set_power(GPS_OFF);
-  set_power(LORA_OFF);
   
-
   Wire.setClock(100000);
 
   // Open serial communications
@@ -357,12 +328,8 @@ void setup()
     dataString += "NaN";    
   }
 
-  
-  {
-    set_power(SD_ON);
 
-    delay(100);
-    
+  {
     // make sure that the default chip select pin is set to output
     // see if the card is present and can be initialized:
     if (!SD.begin(SS)) 
@@ -406,9 +373,7 @@ void setup()
     else 
     {
       Serial.println("#error opening datalog.txt");
-    }
-    
-    set_power(SD_OFF);
+    }    
   }    
   
   Serial.println("#Hmmm...");
@@ -416,8 +381,6 @@ void setup()
   hits = 0;
   //!!! wdt_reset(); //Reset WDT
 }
-
-uint8_t TelemetryCounts = 0;
 
 void loop()
 {
@@ -427,71 +390,7 @@ void loop()
 
   //!!!wdt_reset(); //Reset WDT
 
-  if (TelemetryCounts++ < GPSdelay)
-  {
-    {
-      // make a string for assembling the data to log:
-      String dataString = "";
-      int8_t temp = -63;
-      
-      if (digitalRead(17)) // Protection against sensor mallfunction 
-      {
-    
-        readRTC();
-        
-        // make a string for assembling the data to log:
-        dataString += "$HEALTH,";
-    
-        dataString += String(count); 
-        dataString += ",";
-      
-        dataString += String(tm); 
-        dataString += ".";
-        dataString += String(tm_s100); 
-        dataString += ",";
-  
-        if (! sensor.begin()) 
-        {
-          dataString += "NaN,NaN";
-        }
-        else
-        {
-          float pressure = sensor.getPressure();
-          dataString += String(pressure); 
-          dataString += ",";
-      
-          float temperature = sensor.getTemperature();
-          dataString += String(temperature); 
-          temp = round(temperature);
-        }  
-      }
-      else
-      {
-        dataString += "$Error";
-      }
-
-      int16_t voltage = readBat(8);
-      int16_t current = readBat(10);
-      
-      dataString += ",";
-      dataString += String(float(voltage)/1000);   // V - U
-      dataString += ",";
-      dataString += String(current);  // mA - I
-      dataString += ",";
-      dataString += String(readBat(4));   // mAh - remaining capacity
-      dataString += ",";
-      dataString += String(readBat(6));   // mAh - full charge
-      dataString += ",";
-      dataString += String(hits);   // number of hits per measurement cycle
-  
-      Serial.println(dataString);
-    
-    }
-  }
-  else
-  {
-    TelemetryCounts = 0;
-    
+  {    
     // GPS **********************
     set_power(GPS_ON);
     delay(30);  
@@ -500,7 +399,7 @@ void loop()
       const char cmd[14]={0xB5 ,0x62 ,0x06 ,0x08 ,0x06 ,0x00 ,0xE8 ,0x03 ,0x01 ,0x00 ,0x00 ,0x00 ,0x00 ,0x37};
       for (int n=0;n<(14);n++) Serial1.write(cmd[n]); 
     }
-  
+
     {
       TinyGPSPlus gps;
       int16_t gpschars = 0;
@@ -524,13 +423,8 @@ void loop()
       Serial.print(gps.location.rawLng().deg);
       Serial.print(" ");
       Serial.println(gps.location.rawLng().billionths);
-  
-      uint32_t lat = round(gps.location.lat()*10000);
-      uint32_t lon = round(gps.location.lng()*10000);
-      uint16_t lat_short = lat % 65535;
-      uint16_t lon_short = lon % 65535;
-   
     }
+  
   
     {    
       // make a string for assembling the NMEA to log:
@@ -573,8 +467,6 @@ void loop()
       set_power(GPS_OFF);
   
       {
-          set_power(SD_ON);
-          
           // make sure that the default chip select pin is set to output
           // see if the card is present and can be initialized:
           if (!SD.begin(SS)) 
@@ -600,9 +492,7 @@ void loop()
           else 
           {
             Serial.println("#error opening datalog.txt");
-          }
-          
-          set_power(SD_OFF);
+          }          
       }  
   #ifdef DEBUG
       Serial.println(dataString);  // print to terminal 
@@ -612,13 +502,13 @@ void loop()
   }
 
   hits = 0;
-  for(uint16_t i=0; i<(TELEdelay); i++)  // measurements between telemetry sendings
+  for(uint16_t i=0; i<(GPSdelay); i++)  // measurements between telemetry sendings
   {
     PORTB = 1;                          // Set reset output for peak detector to H
     ADMUX = (analog_reference << 6) | 0b00000; // Select A0 single ended
-    DDRB = 0b10011111;                  // Reset peak detector
+    DDRB = 0b11111111;                  // Reset peak detector
     delayMicroseconds(2);              
-    DDRB = 0b10011110;
+    DDRB = 0b11111110;
     delayMicroseconds(8);   
 
     for(int n=0; n<RANGE; n++) // clear histogram
@@ -637,9 +527,9 @@ void loop()
       // start the conversion
       sbi(ADCSRA, ADSC);   
       delayMicroseconds(20); // wait more than 1.5 cycle of ADC clock for sample/hold
-      DDRB = 0b10011111;                  // Reset peak detector
+      DDRB = 0b11111111;                  // Reset peak detector
       delayMicroseconds(2);              
-      DDRB = 0b10011110;
+      DDRB = 0b11111110;
       while (bit_is_clear(ADCSRA, ADIF)); // wait for end of conversion 
   
       // we have to read ADCL first; doing so locks both ADCL
@@ -730,9 +620,6 @@ void loop()
       count++;
 
       {        
-
-        set_power(SD_ON);
-
         // make sure that the default chip select pin is set to output
         // see if the card is present and can be initialized:
         if (!SD.begin(SS)) 
@@ -758,9 +645,7 @@ void loop()
         else 
         {
           Serial.println("#error opening datalog.txt");
-        }
-  
-        set_power(SD_OFF);
+        }  
       }          
       digitalWrite(LED_red, HIGH);  // Blink for Dasa
       Serial.println(dataString);   // print to terminal
@@ -785,8 +670,6 @@ void loop()
       }
        
       {
-        set_power(SD_ON);
-
         // make sure that the default chip select pin is set to output
         // see if the card is present and can be initialized:
         if (!SD.begin(SS)) 
@@ -813,8 +696,6 @@ void loop()
         {
           Serial.println("#error opening datalog.txt");
         }
-  
-        set_power(SD_OFF);
       }          
       digitalWrite(LED_red, HIGH);  // Blink for Dasa
       Serial.println(dataString);   // print to terminal 
